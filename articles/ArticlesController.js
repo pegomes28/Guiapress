@@ -7,7 +7,7 @@ const slugify = require("slugify");
 // Listar todos os artigos
 router.get("/admin/articles", (req, res) => {
     Article.findAll({
-        include: [{model: Category}]
+        include: [{ model: Category }]
     }).then(articles => {
         res.render("admin/articles/index", { articles });
     }).catch(err => {
@@ -28,16 +28,15 @@ router.get("/admin/articles/new", (req, res) => {
 
 // Salvar artigo no banco
 router.post("/articles/save", (req, res) => {
-    const { title, body, article } = req.body;
+    console.log(req.body); // <- veja no terminal
+    const { title, body, category } = req.body;
 
-    console.log("Dados recebidos:", title, body, article); // depuração
-
-    if (title && body && article) {
+    if (title && body && category) {
         Article.create({
-            title: title,
+            title,
             slug: slugify(title),
-            body: body,
-            categoryId: article
+            body,
+            categoryId: category
         }).then(() => {
             res.redirect("/admin/articles");
         }).catch(err => {
@@ -49,16 +48,14 @@ router.post("/articles/save", (req, res) => {
     }
 });
 
-
-// Rota para deletar uma categoria
+// Rota para deletar um artigo
 router.post("/articles/delete", (req, res) => {
-    var id = req.body.id;
+    const id = req.body.id;
 
-    if (id != undefined && !isNaN(id)) {
+    if (id && !isNaN(id)) {
         Article.destroy({
-            where: { id: id }
+            where: { id }
         }).then(() => {
-            console.log("Artigo deletad0, ID:", id);
             res.redirect("/admin/articles");
         }).catch(err => {
             console.error("Erro ao deletar artigo:", err);
@@ -68,39 +65,42 @@ router.post("/articles/delete", (req, res) => {
         res.redirect("/admin/articles");
     }
 });
-//localizar dados para editar
 
-router.get("/admin/articles/edit/:id", (req,res) => {
-    var id = req.params.id;
+// Formulário de edição
+router.get("/admin/articles/edit/:id", (req, res) => {
+    const id = req.params.id;
 
-    Category.findByPk(id).then(article => {
-        if(article !=undefined){
-            res.render("admin/articles/edit",{article: article});
-        }else{
+    Article.findByPk(id).then(article => {
+        if (article) {
+            Category.findAll().then(categories => {
+                res.render("admin/articles/edit", { article, categories });
+            });
+        } else {
             res.redirect("/admin/articles");
         }
-    }).catch(erro => {
+    }).catch(err => {
+        console.error("Erro ao buscar artigo:", err);
         res.redirect("/admin/articles");
-    })
-})
+    });
+});
 
-//salvar edição
-router.post("/articles/update", (req,res) => {
-    var id = req.body.id
-    var title = req.body.title;
+// Salvar edição do artigo
+router.post("/articles/update", (req, res) => {
+    const { id, title, body, category } = req.body;
 
     Article.update({
-        title: title,
+        title,
         slug: slugify(title),
-        body: body
-    },{
-        where: {
-            id: id
-            
-        }
+        body,
+        categoryId: category
+    }, {
+        where: { id }
     }).then(() => {
         res.redirect("/admin/articles");
-    })
-})
+    }).catch(err => {
+        console.error("Erro ao atualizar artigo:", err);
+        res.redirect("/admin/articles");
+    });
+});
 
 module.exports = router;
